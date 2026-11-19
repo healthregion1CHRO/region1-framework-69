@@ -535,7 +535,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwHdLxW5S6J7iNsyxynPSWa
     document.getElementById('lgOut').onclick=async()=>{ try{ await api('logout'); }catch(e){} sessionStorage.removeItem('r1-session'); location.reload(); };
     if(SESSION.role!=='admin' && SESSION.unitId!=null){
       const ri=SESSION.unitId, u=app.R1[ri]; const ti=app.UTYPES.findIndex(t=>t.includes(u.type));
-      window.__LOCK={ri,ti}; const tb=document.getElementById('tabs'); if(tb) tb.style.display='none'; app.SEL[ti]=ri; app.PKF[ti]={type:'',prov:u.prov}; app.saveSel(); app.select(ti,true); app.setView('tree');
+      window.__LOCK={prov:u.prov}; document.querySelectorAll('#tabs .tab-r, #tabs .tab-idx').forEach(b=>b.style.display='none'); app.UTYPES.forEach((_,i)=>{ app.PKF[i]={type:'',prov:u.prov}; }); app.SEL[ti]=ri; app.saveSel(); app.select(ti,true); app.setView('tree');
     }
   }
   function done(s){ SESSION=s; sessionStorage.setItem('r1-session',JSON.stringify(s)); document.getElementById('loginOv').hidden=true; authResolve(); applyRole(); }
@@ -1295,7 +1295,7 @@ function showEntered(push){
 // ---------- unit picker ----------
 const PKF = {};   // tab -> {type, prov}
 function renderPicker(){
-  if(window.__LOCK){ if(cur!==window.__LOCK.ti) delete SEL[cur]; else SEL[cur]=window.__LOCK.ri; }
+  if(window.__LOCK){ const _s=R1[SEL[cur]]; if(_s && _s.prov!==window.__LOCK.prov) delete SEL[cur]; if(PKF[cur]) PKF[cur].prov=window.__LOCK.prov; }
   const all=R1.filter(u=>UTYPES[cur].includes(u.type)), su=selUnit(), types=UTYPES[cur];
   const f=PKF[cur]||(PKF[cur]={type:'', prov: su?su.prov:''});
   const byT = f.type? all.filter(u=>u.type===f.type) : all;
@@ -1312,7 +1312,7 @@ function renderPicker(){
   $('pkProv').onchange=e=>{ f.prov=e.target.value; renderPicker(); renderSum(); };
   $('pkUnit').onchange=e=>{ const v=e.target.value; if(v==='') delete SEL[cur]; else SEL[cur]=+v; saveSel(); render(); };
   renderPickerSum(); renderPdfBar();
-  if(window.__LOCK){ ['pkType','pkProv','pkUnit'].forEach(id=>{ const e=document.getElementById(id); if(e) e.disabled=true; }); }
+  if(window.__LOCK){ ['pkProv'].forEach(id=>{ const e=document.getElementById(id); if(e) e.disabled=true; }); }
 }
 function renderPickerSum(){
   const el=$('pkSum'); if(!el) return; const su=selUnit();
