@@ -535,7 +535,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwHdLxW5S6J7iNsyxynPSWa
     document.getElementById('lgOut').onclick=async()=>{ try{ await api('logout'); }catch(e){} sessionStorage.removeItem('r1-session'); location.reload(); };
     if(SESSION.role!=='admin' && SESSION.unitId!=null){
       const ri=SESSION.unitId, u=app.R1[ri]; const ti=app.UTYPES.findIndex(t=>t.includes(u.type));
-      window.__LOCK={ri,ti}; app.SEL[ti]=ri; app.PKF[ti]={type:'',prov:u.prov}; app.saveSel(); app.select(ti,true); app.setView('tree');
+      window.__LOCK={ri,ti}; const tb=document.getElementById('tabs'); if(tb) tb.style.display='none'; app.SEL[ti]=ri; app.PKF[ti]={type:'',prov:u.prov}; app.saveSel(); app.select(ti,true); app.setView('tree');
     }
   }
   function done(s){ SESSION=s; sessionStorage.setItem('r1-session',JSON.stringify(s)); document.getElementById('loginOv').hidden=true; authResolve(); applyRole(); }
