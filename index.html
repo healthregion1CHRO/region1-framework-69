@@ -187,6 +187,8 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .notes{margin-top:36px;border-top:1px solid var(--line);padding-top:16px}
 .notes h3{font-size:15px;margin:0 0 6px}
 .notes ul{margin:0;padding-left:18px;font-size:14px;color:var(--muted);display:grid;gap:4px;max-width:110ch}
+.credit{margin:28px 0 8px;padding-top:14px;border-top:1px solid var(--line,#d9e2de);text-align:center;font-size:13px;color:var(--muted)}
+@media print{.credit{display:none}}
 .src{margin-top:18px;font-size:13px;color:var(--muted)}
 /* Drawer */
 .scrim{position:fixed;inset:0;background:rgba(5,15,12,.38);z-index:20}
@@ -467,6 +469,7 @@ input.num:disabled{background:var(--sunk);cursor:not-allowed}
     <div id="tocView"></div>
     <div id="posView" hidden></div>
   </section>
+  <footer class="credit">By สุภัทร บุยประเสริฐ นักทรัพยากรบุคคล สนง.เขตสุขภาพที่ 1</footer>
 </div>
 
 <div class="scrim" id="scrim" hidden></div>
