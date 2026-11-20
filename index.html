@@ -655,7 +655,7 @@ function taskSecs(g, ui){
   const same = un.size===gp.size && [...gp].every(p=>un.has(p));
   return tp;
 }
-const NOINPUT=new Set(['นักวิทยาศาสตร์การแพทย์ (วุฒิ วทบ.สาขาวิชาเวชศาสตร์การธนาคารเลือด)']); // ซ่อนช่องกรอกตัวเลข
+const NOINPUT=new Set([]); // ตำแหน่งที่ซ่อนช่องกรอกตัวเลข (ตอนนี้ไม่มี)
 function hidePos(g, p, ui){
   ui=ui==null?cur:ui; const ts=taskSecs(g,ui); if(!ts.length) return false;
   if(ui===1) return hideDirect(g,1);
