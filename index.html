@@ -655,6 +655,7 @@ function taskSecs(g, ui){
   const same = un.size===gp.size && [...gp].every(p=>un.has(p));
   return tp;
 }
+const NOINPUT=new Set(['นักวิทยาศาสตร์การแพทย์ (วุฒิ วทบ.สาขาวิชาเวชศาสตร์การธนาคารเลือด)']); // ซ่อนช่องกรอกตัวเลข
 function hidePos(g, p, ui){
   ui=ui==null?cur:ui; const ts=taskSecs(g,ui); if(!ts.length) return false;
   if(ui===1) return hideDirect(g,1);
@@ -674,7 +675,7 @@ function posTable(g, mi, gi){
   pos.forEach((p,pi)=>{ if(hidePos(g,p)) return; vis++;
     const k0=keyOf(mi,gi,pi), dis=k0?'':' disabled placeholder="–"', k=k0||('x_'+baseKey(cur,mi,gi,pi)), v=(k0&&VALS[k0])||{};
     rows+=`<tr><th scope="row">${hl(p)}</th>
-      <td><input class="num" type="number" inputmode="numeric" min="0" step="1" id="j18-${k}" data-k="${k}" data-f="j18" data-p="${esc(p)}" data-mi="${mi}" data-gi="${gi}" value="${fmt(v.j18)}" aria-label="กรอบ ปี 69 ${esc(p)}"${dis}></td>
+      ${NOINPUT.has(p)?'<td class="noinp">–</td>':`<td><input class="num" type="number" inputmode="numeric" min="0" step="1" id="j18-${k}" data-k="${k}" data-f="j18" data-p="${esc(p)}" data-mi="${mi}" data-gi="${gi}" value="${fmt(v.j18)}" aria-label="กรอบ ปี 69 ${esc(p)}"${dis}></td>`}
       </tr>`;
   });
   const su0=selUnit(), ex=su0?extrasFor(R1.indexOf(su0),mi,gi):[];
@@ -687,7 +688,7 @@ function posTable(g, mi, gi){
     rows+=`<tr class="trow"><th colspan="2" scope="colgroup">${numTask(tsx,n,t)}${hl(cl(t.name))}</th></tr>`;
     t.positions.forEach((p,pi)=>{ tn++;
       const k0=ri2<0?null:tKey(ri2,mi,gi,ti,pi), dis=k0?'':' disabled placeholder="–"', k=k0||('x_'+KEYS[cur]+`_m${mi}_g${gi}_t${ti}_p${pi}`), v=(k0&&VALS[k0])||{};
-      rows+=`<tr class="tprow"><th scope="row">${hl(p)}</th><td><input class="num" type="number" inputmode="numeric" min="0" step="1" id="j18-${k}" data-k="${k}" data-f="j18" data-p="${esc(p)}" data-mi="${mi}" data-gi="${gi}" value="${fmt(v.j18)}" aria-label="กรอบ ปี 69 ${esc(p)} ${esc(cl(t.name))}"${dis}></td></tr>`; });
+      rows+=`<tr class="tprow"><th scope="row">${hl(p)}</th>${NOINPUT.has(p)?'<td class="noinp">–</td>':`<td><input class="num" type="number" inputmode="numeric" min="0" step="1" id="j18-${k}" data-k="${k}" data-f="j18" data-p="${esc(p)}" data-mi="${mi}" data-gi="${gi}" value="${fmt(v.j18)}" aria-label="กรอบ ปี 69 ${esc(p)} ${esc(cl(t.name))}"${dis}></td>`}</tr>`; });
   });
   return `<div class="gpos"><table class="ptab" data-grp="${mi}_${gi}"><thead><tr><th scope="col">สายงาน/ตำแหน่ง (${vis+ex.length+tn})</th><th scope="col">กรอบ ปี 69</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th scope="row">รวม</th><td data-sum="j18"></td></tr></tfoot></table></div>`;
 }
