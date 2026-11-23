@@ -152,6 +152,7 @@ mark{background:var(--mark);color:inherit;border-radius:2px;padding:0 1px}
 .diff.ok{color:var(--accent)} .diff.short{color:var(--m4);font-weight:600} .diff.over{color:var(--m1);font-weight:600}
 .tchips{padding:0 12px 10px;margin:0}
 .savenote{font-size:13.5px;color:var(--muted);margin:-6px 0 14px}
+.savebar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px}.savebar .savenote{margin:0}.savebtn{font:inherit;font-size:14.5px;font-weight:600;padding:7px 18px;border-radius:var(--r);border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}.savebtn:disabled{opacity:.6;cursor:default}
 .savenote.warn{color:var(--m4)} .savenote.ok{color:var(--accent)}
 /* Index */
 .tab-idx{border-style:dashed}
@@ -442,7 +443,7 @@ input.num:disabled{background:var(--sunk);cursor:not-allowed}
       <div class="search"><input id="q" type="search" placeholder="ค้นหากลุ่มงาน งาน หรือสายงาน" aria-label="ค้นหา"></div>
     </div>
     <div id="chartView"></div>
-    <p class="savenote" id="saveNote" hidden></p>
+    <div class="savebar"><button type="button" class="savebtn" id="saveBtn" hidden>บันทึก</button><p class="savenote" id="saveNote" hidden></p></div>
     <div id="treeView" hidden></div>
     <div id="outlineView" hidden></div>
     <div id="distView" hidden></div>
@@ -731,6 +732,28 @@ async function initDb(){
     refreshSums(); if(!$('index').hidden) renderIndex(); renderPickerSum(); if(view==='units') renderUnits(); updateDist(); updatePosSum(); if(!$('overall').hidden) renderOverall(); if(!$('entered').hidden) renderEntered();
   }, ()=>setSave('เชื่อมต่อที่เก็บข้อมูลไม่ได้ ลองเปิดหน้าใหม่อีกครั้ง','warn'));
 }
+async function saveAll(){
+  const btn=document.getElementById('saveBtn'); if(btn) btn.disabled=true;
+  try{
+    const ae=document.activeElement; // commit the field currently being edited
+    if(ae && ae.matches && ae.matches('input.num')) ae.dispatchEvent(new Event('change',{bubbles:true}));
+    await new Promise(r=>setTimeout(r,0));
+    try{ localStorage.setItem('moph-counts', JSON.stringify(VALS)); }catch(e){}
+    if(!DB){ setSave('บันทึกในเครื่องนี้แล้ว','ok'); return; }
+    const su=selUnit(), u=U[cur], seen=new Set(), jobs=[];
+    document.querySelectorAll('input.num').forEach(inp=>{
+      const k=inp.dataset.k; if(!su||!k||!k.startsWith('u')||seen.has(k)||!VALS[k]) return;
+      const mi=+inp.dataset.mi, gi=+inp.dataset.gi; if(!u.missions[mi]||!u.missions[mi].groups[gi]) return;
+      seen.add(k);
+      jobs.push(DB.collection('counts').doc(k).set({unitId:'u'+R1.indexOf(su), unitType:su.type, unitName:su.name, province:su.prov, unit:u.short, mission:u.missions[mi].name, group:u.missions[mi].groups[gi].name, position:inp.dataset.p, j18:VALS[k].j18, real:VALS[k].real}));
+    });
+    await Promise.all(jobs);
+    if(su){ const ri=R1.indexOf(su); if(CFG['u'+ri]) await saveCfg(ri, CFG['u'+ri]); }
+    setSave('บันทึกแล้ว '+new Date().toLocaleTimeString('th-TH'),'ok');
+  }catch(err){ setSave(err&&(err.code==='not_granted'||err.code==='permission_denied') ? 'คุณมีสิทธิ์ดูอย่างเดียว ตัวเลขที่กรอกจะไม่ถูกบันทึก' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง','warn'); }
+  finally{ if(btn) btn.disabled=false; }
+}
+document.getElementById('saveBtn').addEventListener('click', saveAll);
 function setSave(msg,cls){ const el=document.getElementById('saveNote'); if(el){ el.textContent=msg; el.className='savenote '+cls; } }
 document.addEventListener('input', e=>{ if(e.target.matches('input.num')) refreshSums(); });
 document.addEventListener('change', async e=>{
@@ -796,7 +819,7 @@ $('dClose').onclick=closeD; $('scrim').onclick=closeD;
 document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !$('drawer').hidden) closeD(); });
 
 // view + search
-function setView(v){ view=v; if(v==='units' && typeof renderUnits==='function' && $('unitsView').innerHTML) renderUnits(); const sn=$('saveNote'); if(sn) sn.hidden = v!=='tree'; $('notes').hidden = v==='units'||v==='sum'||v==='dist'; if(v==='dist') updateDist(); [['chart','vChart','chartView'],['tree','vTree','treeView'],['outline','vOutline','outlineView'],['dist','vDist','distView']].forEach(([k,b,c])=>{ $(b).setAttribute('aria-pressed', v===k); $(c).hidden = v!==k; }); }
+function setView(v){ view=v; if(v==='units' && typeof renderUnits==='function' && $('unitsView').innerHTML) renderUnits(); const sn=$('saveNote'); if(sn) sn.hidden = v!=='tree'; const sb=$('saveBtn'); if(sb) sb.hidden = v!=='tree'; $('notes').hidden = v==='units'||v==='sum'||v==='dist'; if(v==='dist') updateDist(); [['chart','vChart','chartView'],['tree','vTree','treeView'],['outline','vOutline','outlineView'],['dist','vDist','distView']].forEach(([k,b,c])=>{ $(b).setAttribute('aria-pressed', v===k); $(c).hidden = v!==k; }); }
 $('vChart').onclick=()=>setView('chart'); $('vTree').onclick=()=>setView('tree'); $('vOutline').onclick=()=>setView('outline'); $('vDist').onclick=()=>setView('dist');
 let tmr; $('q').addEventListener('input', e=>{ clearTimeout(tmr); tmr=setTimeout(()=>{ q=e.target.value.trim(); renderChart(); renderTree(); renderOutline(); renderUnits(); renderSum(); },120); });
 
