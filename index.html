@@ -715,19 +715,20 @@ function setDiff(el,j,r){
   const d=r-j; el.textContent = d===0 ? 'ครบ' : (d<0? 'ขาด '+(-d) : 'เกิน '+d);
   el.className='diff '+(d===0?'ok':d<0?'short':'over');
 }
-const EDITING=new Set(), DIRTY=new Set();   // groups in edit mode / keys edited but not yet saved
+const LOCKED=new Set(), DIRTY=new Set();   // groups saved+locked (default: unlocked, button says บันทึก) / keys edited but not yet saved
+function lockAll(){ document.querySelectorAll('.tcard[data-gk]').forEach(a=>LOCKED.add(a.dataset.gk)); }
+window.addEventListener('beforeunload', e=>{ if(DIRTY.size){ e.preventDefault(); e.returnValue=''; } });
 function syncGroupUI(){
   const has=!!selUnit();
   document.querySelectorAll('.tcard[data-gk]').forEach(a=>{
-    const ed=EDITING.has(a.dataset.gk); a.classList.toggle('editing',ed);
+    const lk=LOCKED.has(a.dataset.gk), ed=!lk; a.classList.toggle('editing',ed&&DIRTY.size>0&&[...a.querySelectorAll('.ptab input.num')].some(i=>DIRTY.has(i.dataset.k)));
     a.querySelectorAll('.ptab input.num').forEach(i=>{ i.readOnly=!ed; });
-    const b=a.querySelector('[data-gact="edit"]'), s=a.querySelector('[data-gact="save"]');
-    if(b) b.disabled=ed||!has; if(s) s.disabled=!ed;
+    const b=a.querySelector('.gbtn'); if(b){ b.dataset.gact=lk?'edit':'save'; b.textContent=lk?'แก้ไข':'บันทึก'; b.disabled=!has; }
   });
 }
 function gStat(a,msg,cls){ const el=a&&a.querySelector('.gstat'); if(el){ el.textContent=msg; el.className='gstat '+(cls||''); } }
 async function saveGroup(a){
-  const gk=a.dataset.gk, su=selUnit(), u=U[cur], sb=a.querySelector('[data-gact="save"]');
+  const gk=a.dataset.gk, su=selUnit(), u=U[cur], sb=a.querySelector('.gbtn');
   if(sb) sb.disabled=true; gStat(a,'กำลังบันทึก…','');
   const keys=new Set();
   try{
@@ -742,7 +743,7 @@ async function saveGroup(a){
       });
       await Promise.all(jobs);
     }
-    keys.forEach(k=>DIRTY.delete(k)); EDITING.delete(gk); syncGroupUI();
+    keys.forEach(k=>DIRTY.delete(k)); LOCKED.add(gk); syncGroupUI();
     gStat(a, DB?'บันทึกแล้ว '+new Date().toLocaleTimeString('th-TH'):'บันทึกในเครื่องนี้แล้ว','ok');
     setSave(DB?'บันทึกแล้ว':'บันทึกในเครื่องนี้แล้ว','ok');
   }catch(err){
@@ -753,7 +754,7 @@ async function saveGroup(a){
 document.addEventListener('click', e=>{
   const b=e.target.closest&&e.target.closest('[data-gact]'); if(!b) return;
   const a=b.closest('.tcard[data-gk]'); if(!a) return;
-  if(b.dataset.gact==='edit'){ if(!selUnit()) return; EDITING.add(a.dataset.gk); syncGroupUI(); gStat(a,'โหมดแก้ไข: กรอกแล้วกด บันทึก',''); const f=a.querySelector('.ptab input.num:not([disabled])'); if(f) f.focus(); }
+  if(b.dataset.gact==='edit'){ if(!selUnit()) return; LOCKED.delete(a.dataset.gk); syncGroupUI(); gStat(a,'',''); const f=a.querySelector('.ptab input.num:not([disabled])'); if(f) f.focus(); }
   else if(b.dataset.gact==='save') saveGroup(a);
 });
 let DB=null;
@@ -781,7 +782,7 @@ async function saveAll(){
     if(ae && ae.matches && ae.matches('input.num')) ae.dispatchEvent(new Event('change',{bubbles:true}));
     await new Promise(r=>setTimeout(r,0));
     try{ localStorage.setItem('moph-counts', JSON.stringify(VALS)); }catch(e){}
-    if(!DB){ DIRTY.clear(); EDITING.clear(); syncGroupUI(); setSave('บันทึกในเครื่องนี้แล้ว','ok'); return; }
+    if(!DB){ DIRTY.clear(); lockAll(); syncGroupUI(); setSave('บันทึกในเครื่องนี้แล้ว','ok'); return; }
     const su=selUnit(), u=U[cur], seen=new Set(), jobs=[];
     document.querySelectorAll('input.num').forEach(inp=>{
       const k=inp.dataset.k; if(!su||!k||!k.startsWith('u')||seen.has(k)||!VALS[k]) return;
@@ -791,7 +792,7 @@ async function saveAll(){
     });
     await Promise.all(jobs);
     if(su){ const ri=R1.indexOf(su); if(CFG['u'+ri]) await saveCfg(ri, CFG['u'+ri]); }
-    DIRTY.clear(); EDITING.clear(); syncGroupUI();
+    DIRTY.clear(); lockAll(); syncGroupUI();
     setSave('บันทึกแล้ว '+new Date().toLocaleTimeString('th-TH'),'ok');
   }catch(err){ setSave(err&&(err.code==='not_granted'||err.code==='permission_denied') ? 'คุณมีสิทธิ์ดูอย่างเดียว ตัวเลขที่กรอกจะไม่ถูกบันทึก' : 'บันทึกไม่สำเร็จ ลองอีกครั้ง','warn'); }
   finally{ if(btn) btn.disabled=false; }
@@ -808,7 +809,7 @@ document.addEventListener('change', async e=>{
   document.querySelectorAll(`input.num[data-k="${k}"][data-f="${f}"]`).forEach(o=>{ if(o!==inp) o.value=fmt(v); }); renderPickerSum(); updateDist(); updatePosSum();
   refreshSums();
   if(!k.startsWith('u')) return;
-  if(EDITING.has(cur+'_'+inp.dataset.mi+'_'+inp.dataset.gi)){ DIRTY.add(k); setSave('มีการแก้ไขที่ยังไม่บันทึก กดปุ่ม บันทึก ของกลุ่มงาน','warn'); return; }
+  if(!LOCKED.has(cur+'_'+inp.dataset.mi+'_'+inp.dataset.gi)){ DIRTY.add(k); setSave('มีการแก้ไขที่ยังไม่บันทึก กดปุ่ม บันทึก ของกลุ่มงาน','warn'); return; }
   if(!DB){ try{ localStorage.setItem('moph-counts', JSON.stringify(VALS)); setSave('บันทึกในเครื่องนี้แล้ว','ok'); }catch(err){} return; }
   const u=U[cur], mi=+inp.dataset.mi, gi=+inp.dataset.gi, su=selUnit();
   if(!su) return;
@@ -824,7 +825,7 @@ function renderTree(){
     const gs=m.groups.filter(g=>!ql || gText(g).includes(ql) || m.name.toLowerCase().includes(ql));
     if(!gs.length && ql) return; any=true;
     h+=`<section class="osec" style="--mc:${mc(mi)}"><h3>${hl(m.name)}</h3><p class="mdesc">${gs.length} กลุ่มงาน</p><div class="tstack">`;
-    gs.forEach(g=>{ const gi=m.groups.indexOf(g); h+=`<article class="tcard" id="g-${KEYS[cur]}-${mi}-${gi}" data-gk="${cur}_${mi}_${gi}" data-mi="${mi}" data-gi="${gi}"><div class="gbar"><button type="button" class="gbtn" data-gact="edit">แก้ไข</button><button type="button" class="gbtn" data-gact="save">บันทึก</button><span class="gstat" aria-live="polite"></span></div>${groupTree(g,mi,gi)}</article>`; });
+    gs.forEach(g=>{ const gi=m.groups.indexOf(g); h+=`<article class="tcard" id="g-${KEYS[cur]}-${mi}-${gi}" data-gk="${cur}_${mi}_${gi}" data-mi="${mi}" data-gi="${gi}"><div class="gbar"><button type="button" class="gbtn" data-gact="save">บันทึก</button><span class="gstat" aria-live="polite"></span></div>${groupTree(g,mi,gi)}</article>`; });
     h+=`</div></section>`;
   });
   h+='</div>';
@@ -1378,7 +1379,7 @@ function renderPicker(){
     <div class="pk-s" id="pkSum" aria-live="polite"></div>`;
   $('pkType').onchange=e=>{ f.type=e.target.value; f.prov=''; renderPicker(); renderSum(); };
   $('pkProv').onchange=e=>{ f.prov=e.target.value; renderPicker(); renderSum(); };
-  $('pkUnit').onchange=e=>{ const v=e.target.value; if(v==='') delete SEL[cur]; else SEL[cur]=+v; EDITING.clear(); DIRTY.clear(); saveSel(); render(); };
+  $('pkUnit').onchange=e=>{ const v=e.target.value; if(v==='') delete SEL[cur]; else SEL[cur]=+v; LOCKED.clear(); DIRTY.clear(); saveSel(); render(); };
   renderPickerSum(); renderPdfBar();
   if(window.__LOCK){ ['pkProv'].forEach(id=>{ const e=document.getElementById(id); if(e) e.disabled=true; }); }
 }
@@ -1389,7 +1390,7 @@ function renderPickerSum(){
   el.className='pk-s';
   el.innerHTML=`<b>${esc(su.name)}</b> ${esc(su.prov)}${su.level?' ระดับ '+esc(su.level):''}<br>กรอบ ปี 69 <b>${fmtN(su.tot)}</b>${t?` กรอกรายสายงานแล้ว <b>${fmtN(t.j)}</b>`:''}`;
 }
-function pickRow(tr){ SEL[cur]=+tr.dataset.ri; EDITING.clear(); DIRTY.clear(); saveSel(); render(); setView('tree'); window.scrollTo({top:$('unit').offsetTop-8}); }
+function pickRow(tr){ SEL[cur]=+tr.dataset.ri; LOCKED.clear(); DIRTY.clear(); saveSel(); render(); setView('tree'); window.scrollTo({top:$('unit').offsetTop-8}); }
 document.addEventListener('click',e=>{ const tr=e.target.closest('#unitsView tr.pick'); if(tr) pickRow(tr); });
 document.addEventListener('keydown',e=>{ if(e.key!=='Enter') return; const tr=e.target.closest&&e.target.closest('#unitsView tr.pick'); if(tr) pickRow(tr); });
 
